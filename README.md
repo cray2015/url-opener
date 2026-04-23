@@ -2,6 +2,25 @@
 
 A lightweight Windows desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand. It lives silently in the Windows system tray with no console window.
 
+## Why this exists
+
+Sending a link from your phone to your PC browser is a solved problem — but every existing solution comes with a catch:
+
+| Tool | Problem |
+|---|---|
+| **Pushbullet** | Requires an account; routes your URLs through their cloud; largely abandoned |
+| **KDE Connect** | Linux + Android focused; Windows port is unreliable; no iOS support |
+| **Join (joaoapps)** | Needs a Google account; cloud-dependent |
+| **Microsoft Phone Link** | Windows 11 only; Android only; heavyweight |
+| **Apple Handoff** | Apple ecosystem only; does not reach Windows |
+
+url-opener is different:
+
+- **No account, no cloud** — traffic never leaves your local network
+- **Triggered by iOS Shortcuts** — plugs into the full Shortcuts ecosystem: share sheets, automations, NFC tags, Focus modes, and more
+- **Open HTTP endpoint** — any device on your network (Android, tablet, scripts) can trigger it, not just one paired app
+- **Single exe, no installer** — drop it anywhere, add it to startup, done
+
 ## Companion iOS Shortcut
 
 An Apple Shortcut is available to trigger url-opener from any Apple device on the same network:

@@ -1,0 +1,9 @@
+# Build outputs
+*.exe
+
+# Go module cache and test cache
+vendor/
+
+# OS
+Thumbs.db
+desktop.ini

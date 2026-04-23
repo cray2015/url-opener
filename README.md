@@ -4,6 +4,8 @@ A lightweight Windows desktop utility that runs a local HTTP server on port **87
 
 ## Why this exists
 
+**Built specifically for the iOS → Windows gap** — the one combination every existing tool either ignores or routes through the cloud.
+
 Sending a link from your phone to your PC browser is a solved problem — but every existing solution comes with a catch:
 
 | Tool | Problem |

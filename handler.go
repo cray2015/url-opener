@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,8 +27,9 @@ type openResponse struct {
 }
 
 var (
-	mu     sync.Mutex
-	server *http.Server
+	mu       sync.Mutex
+	server   *http.Server
+	urlRegex = regexp.MustCompile(`https?://\S+`)
 )
 
 func startHTTPServer() {
@@ -33,6 +37,7 @@ func startHTTPServer() {
 	server = newServer()
 	s := server
 	mu.Unlock()
+	log.Printf("listening on :8765")
 	listenAndServe(s)
 }
 
@@ -65,6 +70,7 @@ func restartServer() {
 	s = server
 	mu.Unlock()
 
+	log.Printf("restarting listener on :8765")
 	go listenAndServe(s)
 }
 
@@ -74,8 +80,15 @@ func handleOpen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		respond(w, http.StatusBadRequest, "failed to read body")
+		return
+	}
+	log.Printf("POST /open body: %s", body)
+
 	var req openRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		respond(w, http.StatusBadRequest, "malformed JSON body")
 		return
 	}
@@ -84,20 +97,51 @@ func handleOpen(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateURL(req.URL); err != nil {
+	text := req.URL
+
+	cleanURL, err := extractURL(text)
+	if err != nil {
+		log.Printf("extractURL error: %v (input: %s)", err, text)
 		respond(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	if err := browser.OpenURL(req.URL); err != nil {
+	if err := browser.OpenURL(cleanURL); err != nil {
 		log.Printf("browser.OpenURL error: %v", err)
 		respond(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
+	log.Printf("opened %s", cleanURL)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(openResponse{Status: "ok"})
+}
+
+// extractURL finds a valid http/https URL from text that may contain extra
+// content (e.g. "Source: ZDNET\nhttps://example.com"). It URL-decodes the
+// input, unescapes backslash-escaped slashes, tries the whole string first,
+// then falls back to a regex scan for the first URL-shaped token.
+func extractURL(text string) (string, error) {
+	if decoded, err := url.QueryUnescape(text); err == nil {
+		text = decoded
+	}
+	text = strings.ReplaceAll(text, `\/`, `/`)
+
+	if candidate := strings.TrimSpace(text); validateURL(candidate) == nil {
+		return candidate, nil
+	}
+
+	match := urlRegex.FindString(text)
+	if match == "" {
+		return "", fmt.Errorf("no valid URL found in body")
+	}
+	match = strings.TrimRight(match, `.,;:!?)"'`)
+
+	if err := validateURL(match); err != nil {
+		return "", fmt.Errorf("no valid URL found in body")
+	}
+	return match, nil
 }
 
 func validateURL(raw string) error {

@@ -37,6 +37,27 @@ Run `url-opener.exe` on Windows. It will appear in the notification area (system
 - **Re-run** — restarts the HTTP listener if the port was briefly unavailable
 - **Exit** — quits the application
 
+### Run at Startup
+
+**Option 1 — Startup folder (simplest)**
+
+1. Press `Win + R`, type `shell:startup`, and hit Enter. This opens your personal startup folder.
+2. Right-click inside the folder → **New → Shortcut**.
+3. Point it to the full path of `url-opener.exe` and finish the wizard.
+
+url-opener will now launch silently at every login.
+
+**Option 2 — Task Scheduler (recommended if you want it to start before login or with a delay)**
+
+1. Open **Task Scheduler** (`taskschd.msc`).
+2. Click **Create Basic Task** → give it a name (e.g. `url-opener`).
+3. Set trigger to **When I log on**.
+4. Set action to **Start a program** → browse to `url-opener.exe`.
+5. On the final screen tick **Open the Properties dialog** → in the **General** tab enable **Run with highest privileges** if needed, and set **Configure for: Windows 10** (or your version).
+6. Optionally add a delay under **Triggers → Edit → Delay task for** (e.g. 10 seconds) to let the network come up first.
+
+To remove autostart, delete the shortcut from the startup folder (Option 1) or disable/delete the task in Task Scheduler (Option 2).
+
 ### API
 
 ```

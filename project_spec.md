@@ -104,7 +104,7 @@ Any URL failing these checks returns `400` with a descriptive message. No networ
 ## Tray Icon Behaviour
 
 - Icon appears in the Windows notification area immediately on launch.
-- **Tooltip**: `"URL Opener — listening on :8765"`
+- **Tooltip**: `"URL Opener — listening on http://<hostname>.local:8765"` where `<hostname>` is the machine's hostname lowercased (falls back to `localhost` if resolution fails)
 - **Right-click menu**:
   - `Re-run` — restarts the HTTP server listener (stops and re-binds on `:8765`). Useful if the port was briefly in use.
   - `Exit` — calls `systray.Quit()` and `os.Exit(0)`.
@@ -121,7 +121,7 @@ main()
  └── systray.Run(onReady, onExit)
       └── onReady()
            ├── systray.SetIcon(iconBytes)
-           ├── systray.SetTooltip(...)
+           ├── systray.SetTooltip(trayTooltip())  // "URL Opener — listening on http://<hostname>.local:8765"
            ├── mRerun := systray.AddMenuItem("Re-run", "Restart HTTP server")
            ├── mExit  := systray.AddMenuItem("Exit", "Quit url-opener")
            └── go func() {

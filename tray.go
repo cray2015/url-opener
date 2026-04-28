@@ -1,10 +1,24 @@
 package main
 
-import "github.com/getlantern/systray"
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/getlantern/systray"
+)
+
+func trayTooltip() string {
+	host, err := os.Hostname()
+	if err != nil || host == "" {
+		host = "localhost"
+	}
+	return fmt.Sprintf("URL Opener — listening on http://%s.local:8765", strings.ToLower(host))
+}
 
 func onReady() {
 	systray.SetIcon(iconBytes)
-	systray.SetTooltip("URL Opener — listening on :8765")
+	systray.SetTooltip(trayTooltip())
 
 	mRerun := systray.AddMenuItem("Re-run", "Restart HTTP server")
 	mExit := systray.AddMenuItem("Exit", "Quit url-opener")

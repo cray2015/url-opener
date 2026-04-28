@@ -31,12 +31,14 @@ An Apple Shortcut is available to trigger url-opener from any Apple device on th
 
 The shortcut sends a `POST /open` request to the machine running url-opener, letting you push a URL from your iPhone/iPad/Mac directly into the Windows browser.
 
-**After installing, update the IP address in the shortcut:**
+**After installing, update the address in the shortcut:**
 
-1. Find your Windows PC's local IP — run `ipconfig` in Command Prompt and note the IPv4 address (e.g. `192.168.1.50`).
+1. Check the tray icon tooltip — it shows the address to use, e.g. `http://mymachine.local:8765`.
 2. Open the Shortcuts app, tap the shortcut, and hit **Edit**.
-3. In the URL field, replace the placeholder IP with your PC's IP: `http://192.168.1.50:8765/open`.
+3. In the URL field, set the address to your PC's hostname: `http://mymachine.local:8765/open`.
 4. Save. Both devices must be on the same local network.
+
+> **Tip:** the `.local` hostname is stable across reboots and easier to copy than an IP address. If mDNS is not available on your network, fall back to the IPv4 address from `ipconfig`.
 
 ## Build
 

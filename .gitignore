@@ -7,3 +7,6 @@ vendor/
 # OS
 Thumbs.db
 desktop.ini
+
+# Local notes
+notes.md

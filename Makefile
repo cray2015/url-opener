@@ -3,3 +3,6 @@ build:
 
 build-debug:
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -tags debug -o url-opener-debug.exe .
+
+changelog:
+	/tmp/git-cliff --config cliff.toml -o CHANGELOG.md

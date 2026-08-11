@@ -1,5 +1,7 @@
 # Build outputs
 *.exe
+url-opener-linux
+url-opener-linux-debug
 
 # Go module cache and test cache
 vendor/

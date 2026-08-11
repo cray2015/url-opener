@@ -20,7 +20,7 @@ A lightweight Windows desktop utility written in Go. It runs a local HTTP server
 - No authentication or API key on the HTTP endpoint (localhost-only, trusted caller).
 - No URL reachability check — format validation only.
 - No Windows autostart / registry integration.
-- No cross-platform support (Windows only).
+- No cross-platform support (Windows only) — **superseded**: a headless Linux build now exists as a compatibility layer, see `CLAUDE.md` → "Platform split" and README → "Linux". It reuses the same HTTP handler and `pkg/browser`; it deliberately has no tray/indicator icon, since `getlantern/systray`'s Linux backend needs cgo + GTK/libayatana-appindicator that this project doesn't otherwise depend on.
 - No persistent configuration file or settings UI.
 
 ---

@@ -1,6 +1,6 @@
 # url-opener
 
-A lightweight Windows desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand. It lives silently in the Windows system tray with no console window.
+A lightweight desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand. On Windows it lives silently in the system tray with no console window; a headless Linux build is also available (no tray icon yet — see [Linux](#linux)).
 
 ## Why this exists
 
@@ -42,14 +42,16 @@ The shortcut sends a `POST /open` request to the machine running url-opener, let
 
 ## Build
 
-Requires Go 1.21+. All builds target Windows (`GOOS=windows GOARCH=amd64`).
+Requires Go 1.21+.
 
 ```bash
-# Release — no console window
+# Windows — release (no console window) / debug
 make build
-
-# Debug — console window with log output
 make build-debug
+
+# Linux — release / debug (headless, no tray icon)
+make build-linux
+make build-linux-debug
 ```
 
 ## Usage
@@ -80,6 +82,31 @@ url-opener will now launch silently at every login.
 6. Optionally add a delay under **Triggers → Edit → Delay task for** (e.g. 10 seconds) to let the network come up first.
 
 To remove autostart, delete the shortcut from the startup folder (Option 1) or disable/delete the task in Task Scheduler (Option 2).
+
+## Linux
+
+`url-opener-linux` runs the same HTTP server and opens URLs via `xdg-open`/`x-www-browser`/`www-browser` (whichever is found on `PATH`), so `/open` behaves identically to Windows. There is **no tray icon on Linux yet** — the process just runs in the foreground and logs to stdout until it receives `SIGINT`/`SIGTERM`; there's no "Re-run" menu, so if the port is briefly unavailable you restart the process yourself.
+
+**Run it directly:**
+
+```bash
+make build-linux
+./url-opener-linux
+```
+
+**Run it as a systemd user service** (so it survives terminal close and restarts on crash):
+
+```bash
+mkdir -p ~/.local/bin ~/.config/systemd/user
+cp url-opener-linux ~/.local/bin/
+cp dist/linux/url-opener.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now url-opener.service
+```
+
+> **Note:** `xdg-open` needs a graphical session (`DISPLAY`/`WAYLAND_DISPLAY` and `DBUS_SESSION_BUS_ADDRESS`). A `systemd --user` service normally inherits these once you're logged into a desktop session; if URLs stop opening after the service starts before login (or over SSH), re-run `systemctl --user daemon-reload` after logging into the desktop, or add `WantedBy=graphical-session.target` bindings appropriate to your distro.
+
+To stop/remove: `systemctl --user disable --now url-opener.service`.
 
 ### API
 

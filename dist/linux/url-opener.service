@@ -1,0 +1,12 @@
+[Unit]
+Description=url-opener — local HTTP endpoint that opens URLs in the default browser
+After=graphical-session.target
+
+[Service]
+# Update this path to wherever you copied the url-opener-linux binary.
+ExecStart=%h/.local/bin/url-opener-linux
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

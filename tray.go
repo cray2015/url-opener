@@ -1,19 +1,21 @@
+//go:build windows
+
 package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
 
 	"github.com/getlantern/systray"
 )
 
 func trayTooltip() string {
-	host, err := os.Hostname()
-	if err != nil || host == "" {
-		host = "localhost"
+	return fmt.Sprintf("URL Opener — listening on %s", serverAddress())
+}
+
+func init() {
+	onListenError = func() {
+		systray.SetTooltip("Port 8765 in use")
 	}
-	return fmt.Sprintf("URL Opener — listening on http://%s.local:8765", strings.ToLower(host))
 }
 
 func onReady() {

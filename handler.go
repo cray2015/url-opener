@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/getlantern/systray"
 	"github.com/pkg/browser"
 )
 
@@ -30,6 +29,11 @@ var (
 	mu       sync.Mutex
 	server   *http.Server
 	urlRegex = regexp.MustCompile(`https?://\S+`)
+
+	// onListenError is called when ListenAndServe fails to bind the port.
+	// Platforms with a system tray (see tray.go) override this to surface
+	// the failure in the tray tooltip; it's a no-op elsewhere.
+	onListenError = func() {}
 )
 
 func startHTTPServer() {
@@ -50,7 +54,7 @@ func newServer() *http.Server {
 func listenAndServe(s *http.Server) {
 	if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Printf("server error: %v", err)
-		systray.SetTooltip("Port 8765 in use")
+		onListenError()
 	}
 }
 

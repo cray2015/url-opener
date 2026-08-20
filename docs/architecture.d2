@@ -1,0 +1,30 @@
+title: url-opener — Architecture {near: top-center}
+
+client: LAN client\niOS Shortcut · curl
+
+app: url-opener — one Go binary, two build targets {
+  style.stroke-width: 2
+
+  server: HTTP server\n:8765
+  handler: src/handler.go\nextract -> validate -> open
+  open: pkg/browser\nOpenURL
+
+  win: Windows\n//go:build windows {
+    tray: systray\nRe-run · Exit\ntooltip shows listen address
+  }
+
+  nix: Linux\n//go:build !windows {
+    sig: wait on SIGINT/SIGTERM\nno tray, headless
+  }
+}
+
+browser: Default browser
+
+client -> app.server: "POST /open\n{\"url\": \"...\"}"
+app.server -> app.handler
+app.handler -> app.open: valid http/https URL
+app.open -> browser: launch
+
+app.win.tray -> app.server: Re-run\n(graceful shutdown + rebind)
+app.server -> app.win.tray: bind failure\n(onListenError)
+app.nix.sig -> app.server: blocks main;\nthe server runs either way

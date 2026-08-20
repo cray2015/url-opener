@@ -1,5 +1,7 @@
 # url-opener
 
+[![CI](https://github.com/cray2015/url-opener/actions/workflows/ci.yml/badge.svg)](https://github.com/cray2015/url-opener/actions/workflows/ci.yml)
+
 A lightweight desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand. On Windows it lives silently in the system tray with no console window; a headless Linux build is also available (no tray icon yet — see [Linux](#linux)).
 
 ## Why this exists
@@ -40,9 +42,27 @@ The shortcut sends a `POST /open` request to the machine running url-opener, let
 
 > **Tip:** the `.local` hostname is stable across reboots and easier to copy than an IP address. If mDNS is not available on your network, fall back to the IPv4 address from `ipconfig`.
 
+## Download
+
+Prebuilt `url-opener.exe` (Windows) and `url-opener-linux` binaries are attached
+to every [release](https://github.com/cray2015/url-opener/releases), along with
+`SHA256SUMS.txt`. Verify with `sha256sum -c SHA256SUMS.txt`.
+
+> **Windows SmartScreen:** the `.exe` is unsigned, so Windows will show a
+> "Windows protected your PC" prompt on first run — **More info → Run anyway**.
+> Code signing needs a paid certificate; see the release notes if that changes.
+
 ## Build
 
-Requires Go 1.21+.
+Requires Go 1.21+. All source lives in `src/`; binaries are written to the repo root.
+
+The build stamps a version into the binary — it defaults to `git describe`, and
+shows up in the tray tooltip on Windows and the startup log line on Linux:
+
+```bash
+make build                    # -> "v1.2.0-2-g80472aa-dirty"
+make build VERSION=v1.3.0     # -> "v1.3.0"
+```
 
 ```bash
 # Windows — release (no console window) / debug
@@ -94,7 +114,32 @@ make build-linux
 ./url-opener-linux
 ```
 
-**Run it as a systemd user service** (so it survives terminal close and restarts on crash):
+**Install it as a systemd user service** (so it survives terminal close and restarts on crash):
+
+```bash
+make install-linux
+# or directly: ./dist/linux/install.sh
+```
+
+The script builds `url-opener-linux` if it isn't built yet, copies it to
+`~/.local/bin`, writes the unit to `~/.config/systemd/user/` with `ExecStart`
+pointed at the real install path, then enables and starts it. Re-run it any
+time to upgrade in place — it stops the running service first, so the binary
+isn't in use. Override the destinations with `BIN_DIR` / `UNIT_DIR`:
+
+```bash
+BIN_DIR=/opt/bin ./dist/linux/install.sh
+```
+
+To remove the binary, the unit, and the enablement symlink:
+
+```bash
+make uninstall-linux
+# or directly: ./dist/linux/install.sh --uninstall
+```
+
+<details>
+<summary>Manual install, if you'd rather not run the script</summary>
 
 ```bash
 mkdir -p ~/.local/bin ~/.config/systemd/user
@@ -104,9 +149,12 @@ systemctl --user daemon-reload
 systemctl --user enable --now url-opener.service
 ```
 
-> **Note:** `xdg-open` needs a graphical session (`DISPLAY`/`WAYLAND_DISPLAY` and `DBUS_SESSION_BUS_ADDRESS`). A `systemd --user` service normally inherits these once you're logged into a desktop session; if URLs stop opening after the service starts before login (or over SSH), re-run `systemctl --user daemon-reload` after logging into the desktop, or add `WantedBy=graphical-session.target` bindings appropriate to your distro.
+The shipped unit's `ExecStart` is `%h/.local/bin/url-opener-linux`; edit it if
+you put the binary elsewhere.
 
-To stop/remove: `systemctl --user disable --now url-opener.service`.
+</details>
+
+> **Note:** `xdg-open` needs a graphical session (`DISPLAY`/`WAYLAND_DISPLAY` and `DBUS_SESSION_BUS_ADDRESS`). A `systemd --user` service normally inherits these once you're logged into a desktop session; if URLs stop opening after the service starts before login (or over SSH), re-run `systemctl --user daemon-reload` after logging into the desktop, or add `WantedBy=graphical-session.target` bindings appropriate to your distro.
 
 ### API
 
@@ -125,3 +173,23 @@ Content-Type: application/json
 | `500 Internal Server Error` | Browser failed to open |
 
 All responses return JSON: `{ "status": "ok" }` or `{ "status": "error", "message": "..." }`.
+
+## Releasing
+
+Releases are cut by pushing a tag; `.github/workflows/release.yml` does the rest.
+
+```bash
+git tag v1.3.0
+git push origin v1.3.0
+```
+
+That builds both release binaries from the tagged tree, generates the release
+notes for that tag with git-cliff, publishes the GitHub Release with the
+binaries plus `SHA256SUMS.txt`, and then regenerates `CHANGELOG.md` and commits
+it back to `master`. Commit messages must follow
+[Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`,
+`docs:`, `refactor:`, `chore:`) — `cliff.toml` drops anything that doesn't.
+
+## License
+
+[MIT](LICENSE) © vibhanshu

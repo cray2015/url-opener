@@ -16,3 +16,11 @@ build-linux-debug:
 
 changelog:
 	git-cliff --config cliff.toml -o CHANGELOG.md
+
+# Install the headless Linux build as a systemd user service. Builds first if
+# url-opener-linux is missing. Override BIN_DIR / UNIT_DIR to relocate.
+install-linux:
+	./dist/linux/install.sh
+
+uninstall-linux:
+	./dist/linux/install.sh --uninstall

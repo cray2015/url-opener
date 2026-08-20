@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore   # keeps git-cliff's conventional-commit parsing happy
+
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: monthly
+    # go.mod pins several 2019-era getlantern pseudo-versions; without a cap
+    # the first scan opens a burst of PRs at once, each triggering CI.
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+    ignore:
+      # The tray library dictates the platform split (see CLAUDE.md). A bump
+      # here is never routine — review it by hand, not via an automated PR.
+      - dependency-name: github.com/getlantern/systray

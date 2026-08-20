@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to (re-)release, e.g. v1.3.0'
+        required: true
+
+permissions:
+  contents: write
+
+# Never cancel a release mid-flight, but don't let two run at once either.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          # git-cliff walks the whole history and needs every tag to work out
+          # what belongs in this release.
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: go.sum
+
+      - name: Resolve tag
+        id: tag
+        run: echo "name=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+
+      # Built from the tagged tree, not from master — a later master commit
+      # must never end up inside a published release artifact. The binaries
+      # are gitignored, so the branch switch further down leaves them alone.
+      - name: Build release binaries
+        run: make build build-linux VERSION=${{ steps.tag.outputs.name }}
+
+      - name: Checksums
+        run: sha256sum url-opener.exe url-opener-linux > SHA256SUMS.txt
+
+      - name: Release notes for this tag
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: RELEASE_NOTES.md
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            url-opener.exe
+            url-opener-linux
+            SHA256SUMS.txt
+
+      # The changelog commit only makes sense if the tag is on master. Tagging
+      # a side branch still publishes a release, it just doesn't rewrite the
+      # changelog.
+      - name: Switch to master
+        id: master
+        run: |
+          set -euo pipefail
+          git fetch origin +refs/heads/master:refs/remotes/origin/master
+          if ! git merge-base --is-ancestor HEAD origin/master; then
+            echo "::notice::${{ steps.tag.outputs.name }} is not an ancestor of master — skipping changelog commit."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git checkout -B master origin/master
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+      # Regenerates the whole file from master's history — same output as
+      # `make changelog` locally.
+      - name: Regenerate CHANGELOG.md
+        if: steps.master.outputs.ok == 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+
+      - name: Commit CHANGELOG.md
+        if: steps.master.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "CHANGELOG.md already up to date."
+            exit 0
+          fi
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add CHANGELOG.md
+          git commit -m "chore: update changelog for ${{ steps.tag.outputs.name }}"
+          git push origin master

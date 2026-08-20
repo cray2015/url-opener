@@ -4,6 +4,10 @@ url-opener
 url-opener-linux
 url-opener-linux-debug
 
+# CI release scratch
+SHA256SUMS.txt
+RELEASE_NOTES.md
+
 # Go module cache and test cache
 vendor/
 

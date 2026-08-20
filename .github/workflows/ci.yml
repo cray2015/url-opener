@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE', '.github/dependabot.yml']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', 'LICENSE', '.github/dependabot.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same branch makes the in-flight run pointless; don't pay
+# for both. Tag/release runs use their own group and are never cancelled.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: vet and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: go.sum   # module cache keyed off go.sum
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l ./src)
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt needed on:"; echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./src
+
+      # No tests exist (see CLAUDE.md), so compiling every target is the only
+      # real signal — and it's what catches build-tag breakage, since the
+      # Windows-only files never compile on the Linux path and vice versa.
+      # Four cross-compiles of a binary this size are seconds, not minutes.
+      - name: Build all targets
+        run: make build build-debug build-linux build-linux-debug
+
+      # shellcheck ships preinstalled on the ubuntu runner image; the fallback
+      # only pays for apt if that ever stops being true.
+      - name: Shellcheck the Linux installer
+        run: |
+          if ! command -v shellcheck >/dev/null; then
+            sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          fi
+          shellcheck dist/linux/install.sh

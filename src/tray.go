@@ -9,7 +9,7 @@ import (
 )
 
 func trayTooltip() string {
-	return fmt.Sprintf("URL Opener — listening on %s", serverAddress())
+	return fmt.Sprintf("URL Opener %s — listening on %s", version, serverAddress())
 }
 
 func init() {

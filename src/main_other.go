@@ -12,7 +12,7 @@ import (
 // No system tray on this platform yet — the server runs in the foreground
 // (or under a service manager) until it receives an interrupt/terminate signal.
 func main() {
-	log.Printf("url-opener starting, listening on %s", serverAddress())
+	log.Printf("url-opener %s starting, listening on %s", version, serverAddress())
 	go startHTTPServer()
 
 	sig := make(chan os.Signal, 1)

@@ -52,7 +52,24 @@ There are no tests in this project.
   via `git-cliff --latest`, then checks out master, regenerates `CHANGELOG.md`
   and commits it back.
 
-Two things that will bite:
+### Cutting a release
+
+Everything is tag-driven; there is no manual step and no release branch.
+
+```bash
+git tag -a v1.4.0 -m "v1.4.0" && git push origin v1.4.0
+```
+
+Bump the minor when the range contains a `feat:`, the patch when it's only
+`fix:`/`chore:`/`docs:`. The tag must be an ancestor of `master` (see below).
+Verified end-to-end on v1.3.0: assets published, checksums matched a
+re-downloaded binary, `main.version` correct in the shipped binary, and the
+`CHANGELOG.md` commit landed back on `master`. Repository **workflow
+permissions are already set to read/write** — the release job needs that and
+a `permissions:` block cannot raise the token above the repo default, so
+don't "fix" a 403 by editing the YAML.
+
+Three things that will bite:
 
 - The changelog commit is skipped unless the tag is an ancestor of `master`, and
   it pushes to `master` with the default `GITHUB_TOKEN`. **If you ever enable
@@ -61,6 +78,13 @@ Two things that will bite:
 - Release notes come from `cliff.toml`, which sets `filter_unconventional =
   true`. A commit that isn't `feat:`/`fix:`/`docs:`/`refactor:`/`chore:` is
   silently dropped from the changelog. Nothing in CI enforces the format.
+  **`ci:`, `build:`, `test:`, `perf:` and `style:` are not in the parser list**
+  — CI and tooling work has to be typed `chore:` or it vanishes from the notes.
+- Dependabot (`.github/dependabot.yml`) bumps action versions across **both**
+  workflow files, so a merged bump changes the release path too and won't be
+  exercised until the next tag. `getlantern/systray` is deliberately on the
+  ignore list: a bump there is never routine, since it dictates the platform
+  split. Both ecosystems are capped at 3 open PRs.
 
 ## Platform split
 

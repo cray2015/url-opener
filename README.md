@@ -2,7 +2,9 @@
 
 [![CI](https://github.com/cray2015/url-opener/actions/workflows/ci.yml/badge.svg)](https://github.com/cray2015/url-opener/actions/workflows/ci.yml)
 
-A lightweight desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand. On Windows it lives silently in the system tray with no console window; a headless Linux build is also available (no tray icon yet — see [Linux](#linux)).
+A lightweight desktop utility that runs a local HTTP server on port **8765** and opens URLs in the system default browser on demand.
+
+Runs on **Windows** (silent, in the system tray) and **Linux** (headless, as a systemd user service — no tray icon yet). Both share the same HTTP endpoint, so anything that can POST a URL works identically against either.
 
 ## Why this exists
 
@@ -23,24 +25,7 @@ url-opener is different:
 - **No account, no cloud** — traffic never leaves your local network
 - **Triggered by iOS Shortcuts** — plugs into the full Shortcuts ecosystem: share sheets, automations, NFC tags, Focus modes, and more
 - **Open HTTP endpoint** — any device on your network (Android, tablet, scripts) can trigger it, not just one paired app
-- **Single exe, no installer** — drop it anywhere, add it to startup, done
-
-## Companion iOS Shortcut
-
-An Apple Shortcut is available to trigger url-opener from any Apple device on the same network:
-
-**[Download Shortcut](https://www.icloud.com/shortcuts/ac5982d6058c4924bfa5214cc10b3bcc)**
-
-The shortcut sends a `POST /open` request to the machine running url-opener, letting you push a URL from your iPhone/iPad/Mac directly into the Windows browser.
-
-**After installing, update the address in the shortcut:**
-
-1. Check the tray icon tooltip — it shows the address to use, e.g. `http://mymachine.local:8765`.
-2. Open the Shortcuts app, tap the shortcut, and hit **Edit**.
-3. In the URL field, set the address to your PC's hostname: `http://mymachine.local:8765/open`.
-4. Save. Both devices must be on the same local network.
-
-> **Tip:** the `.local` hostname is stable across reboots and easier to copy than an IP address. If mDNS is not available on your network, fall back to the IPv4 address from `ipconfig`.
+- **Single binary** — drop the Windows `.exe` anywhere and add it to startup; on Linux one script installs it as a service
 
 ## Download
 
@@ -52,37 +37,16 @@ to every [release](https://github.com/cray2015/url-opener/releases), along with
 > "Windows protected your PC" prompt on first run — **More info → Run anyway**.
 > Code signing needs a paid certificate; see the release notes if that changes.
 
-## Build
+## Windows
 
-Requires Go 1.21+. All source lives in `src/`; binaries are written to the repo root.
-
-The build stamps a version into the binary — it defaults to `git describe`, and
-shows up in the tray tooltip on Windows and the startup log line on Linux:
-
-```bash
-make build                    # -> "v1.2.0-2-g80472aa-dirty"
-make build VERSION=v1.3.0     # -> "v1.3.0"
-```
-
-```bash
-# Windows — release (no console window) / debug
-make build
-make build-debug
-
-# Linux — release / debug (headless, no tray icon)
-make build-linux
-make build-linux-debug
-```
-
-## Usage
-
-Run `url-opener.exe` on Windows. It will appear in the notification area (system tray).
+Run `url-opener.exe`. It appears in the notification area (system tray) with no
+console window.
 
 **Right-click the tray icon** for two options:
 - **Re-run** — restarts the HTTP listener if the port was briefly unavailable
 - **Exit** — quits the application
 
-### Run at Startup
+### Run at startup
 
 **Option 1 — Startup folder (simplest)**
 
@@ -105,21 +69,26 @@ To remove autostart, delete the shortcut from the startup folder (Option 1) or d
 
 ## Linux
 
-`url-opener-linux` runs the same HTTP server and opens URLs via `xdg-open`/`x-www-browser`/`www-browser` (whichever is found on `PATH`), so `/open` behaves identically to Windows. There is **no tray icon on Linux yet** — the process just runs in the foreground and logs to stdout until it receives `SIGINT`/`SIGTERM`; there's no "Re-run" menu, so if the port is briefly unavailable you restart the process yourself.
+`url-opener-linux` runs the same HTTP server and opens URLs via
+`xdg-open`/`x-www-browser`/`www-browser` (whichever is found on `PATH`), so
+`/open` behaves identically to Windows.
 
-**Run it directly:**
+**There is no tray icon on Linux yet.** The practical differences: no icon, no
+right-click menu, and therefore no **Re-run** — restart the service instead
+(see [Managing the service](#managing-the-service)).
 
-```bash
-make build-linux
-./url-opener-linux
-```
-
-**Install it as a systemd user service** (so it survives terminal close and restarts on crash):
+### Install
 
 ```bash
 make install-linux
 # or directly: ./dist/linux/install.sh
 ```
+
+That installs it as a **systemd user service**, so it starts at login, survives
+closing your terminal, and restarts on crash.
+
+> Run it from a clone of this repo — the script needs `dist/linux/url-opener.service`.
+> If you only downloaded the release binary, follow the manual steps below instead.
 
 The script builds `url-opener-linux` if it isn't built yet, copies it to
 `~/.local/bin`, writes the unit to `~/.config/systemd/user/` with `ExecStart`
@@ -154,9 +123,43 @@ you put the binary elsewhere.
 
 </details>
 
+### Managing the service
+
+```bash
+systemctl --user status  url-opener      # is it running?
+systemctl --user restart url-opener      # the Linux equivalent of tray "Re-run"
+journalctl --user -u url-opener -f       # live logs, including the version at startup
+```
+
+To run it in the foreground instead, without installing anything:
+
+```bash
+make build-linux && ./url-opener-linux
+```
+
 > **Note:** `xdg-open` needs a graphical session (`DISPLAY`/`WAYLAND_DISPLAY` and `DBUS_SESSION_BUS_ADDRESS`). A `systemd --user` service normally inherits these once you're logged into a desktop session; if URLs stop opening after the service starts before login (or over SSH), re-run `systemctl --user daemon-reload` after logging into the desktop, or add `WantedBy=graphical-session.target` bindings appropriate to your distro.
 
-### API
+## Companion iOS Shortcut
+
+An Apple Shortcut is available to trigger url-opener from any Apple device on the same network:
+
+**[Download Shortcut](https://www.icloud.com/shortcuts/ac5982d6058c4924bfa5214cc10b3bcc)**
+
+The shortcut sends a `POST /open` request to the machine running url-opener, letting you push a URL from your iPhone/iPad/Mac straight into that machine's browser.
+
+**After installing, update the address in the shortcut:**
+
+1. Find the address of the machine running url-opener:
+   - **Windows** — hover the tray icon; the tooltip shows it, e.g. `http://mymachine.local:8765`.
+   - **Linux** — there's no tray, so read it from the startup log
+     (`journalctl --user -u url-opener | tail -1`), or build it from `hostname`.
+2. Open the Shortcuts app, tap the shortcut, and hit **Edit**.
+3. In the URL field, set the address to that hostname: `http://mymachine.local:8765/open`.
+4. Save. Both devices must be on the same local network.
+
+> **Tip:** the `.local` hostname is stable across reboots and easier to copy than an IP address. If mDNS is not available on your network, fall back to the IPv4 address (`ipconfig` on Windows, `ip addr` on Linux).
+
+## API
 
 ```
 POST http://localhost:8765/open
@@ -174,13 +177,35 @@ Content-Type: application/json
 
 All responses return JSON: `{ "status": "ok" }` or `{ "status": "error", "message": "..." }`.
 
+## Build
+
+Requires Go 1.21+. All source lives in `src/`; binaries are written to the repo root.
+
+The build stamps a version into the binary — it defaults to `git describe`, and
+shows up in the tray tooltip on Windows and the startup log line on Linux:
+
+```bash
+make build                    # -> "v1.2.0-2-g80472aa-dirty"
+make build VERSION=v1.3.0     # -> "v1.3.0"
+```
+
+```bash
+# Windows — release (no console window) / debug
+make build
+make build-debug
+
+# Linux — release / debug (headless, no tray icon)
+make build-linux
+make build-linux-debug
+```
+
 ## Releasing
 
 Releases are cut by pushing a tag; `.github/workflows/release.yml` does the rest.
 
 ```bash
-git tag v1.3.0
-git push origin v1.3.0
+git tag -a v1.4.0 -m "v1.4.0"
+git push origin v1.4.0
 ```
 
 That builds both release binaries from the tagged tree, generates the release
